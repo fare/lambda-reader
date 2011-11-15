@@ -71,7 +71,7 @@
                     (ecase *print-case*
                       ((:upcase :capitalize) #\Λ)
                       (:downcase #\λ))))
-       (eq (find-symbol (symbol-name *lambda-symbol*) *package*) *lambda-symbol*))
+       (eq (find-symbol #.(symbol-name *lambda-symbol*) *package*) *lambda-symbol*))
       (write *lambda-symbol* :stream stream)
       (let ((*print-pprint-dispatch* (copy-pprint-dispatch)))
         (set-pprint-dispatch '(eql lambda) nil)
@@ -84,17 +84,17 @@
   (set-macro-character #\λ (make-λ-reader old-readtable) t new-readtable)
   (set-macro-character #\Λ (make-λ-reader old-readtable) t new-readtable)
   (install-λ-printer)
-  nil)
+  new-readtable)
 
 (defun install-λ-reader (&optional (readtable *readtable*))
-  (let ((old-readtable (copy-readtable readtable)))
-    (install-λ-reader-helper old-readtable readtable)
-    readtable))
+  (let* ((new-readtable (find-readtable readtable))
+         (old-readtable (copy-readtable new-readtable)))
+    (install-λ-reader-helper old-readtable new-readtable)))
 
 (defun new-readtable-with-λ-reader (&optional (readtable *readtable*))
-  (let ((new-readtable (copy-readtable readtable)))
-    (install-λ-reader-helper readtable new-readtable)
-    new-readtable))
+  (let* ((old-readtable (find-readtable readtable))
+         (new-readtable (copy-readtable old-readtable)))
+    (install-λ-reader-helper old-readtable new-readtable)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (install-λ-printer)
@@ -112,7 +112,7 @@
 (defmacro define-λ-readtable (name &body options)
   `(progn
      (defreadtable ,name ,@options)
-     (install-λ-reader (find-readtable ',name))))
+     (install-λ-reader ',name)))
 
 ); eval-when
 
