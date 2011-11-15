@@ -1,60 +1,122 @@
-;;; Reader for λ and Λ that returns CL:LAMBDA.
-;;; To use, call Λ-READER:INSTALL-Λ-READER.
-;;; Any token starting with λ or Λ that would be read as the symbol Λ-READER:Λ
-;;; is now read as CL:LAMBDA.
-
-;;; If the symbol Λ-READER:Λ is imported into the current package,
-;;; then CL:LAMBDA will be pretty printed as Λ-READER:Λ would.
-;;; Thus, if the printer case is uppercase, Λ will be printed;
-;;; otherwise λ will be.
-
+;;; -*- Mode: Lisp ; Base: 10 ; Syntax: ANSI-Common-Lisp -*-
+;;; Reader for λ and/or Λ that returns cl:lambda.
 ;;; Legal mumbo-jumbo at bottom of file
 
-(defpackage :λ-reader (:use :cl) (:export :install-λ-reader :λ))
+;;; To use,
+;;; A- define a package FOO that imports symbol #:λ from package λ-reader.
+;;; B- (common-lisp:in-package FOO) (named-readtables:in-readtable :λ-standard)
+;;;
+;;; Now, any token starting with λ or Λ
+;;; that would be read as the symbol λ-reader:λ
+;;; is now read as cl:lambda.
+;;; Moreover, it will be pretty-printed as λ-reader:λ would; thus,
+;;; if the printer case is uppercase, Λ will be printed; otherwise λ will be.
+;;;
+;;; You can define your own readtables using λ with define-λ-readtable,
+;;; which is a variant of named-readtables:defreadtable that does magic for λ.
+
+#+xcvb (module ())
+
+(defpackage :λ-reader (:use :cl :named-readtables)
+  (:nicknames #:lambda-readtable)
+  (:export #:λ #:make-λ-reader #:install-λ-printer
+           #:install-λ-reader #:new-readtable-with-λ-reader #:define-λ-readtable))
+
 (in-package :λ-reader)
 
-(defvar *saved-readtable* (copy-readtable))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *lambda-symbol*
+    (let ((*package* (find-package :λ-reader))
+          (*readtable* (find-readtable :standard)))
+      (read-from-string "λ"))
+    "Magic lambda symbol"))
 
-(defmacro #.(intern "Λ" *package*) (&body args)
+(defmacro #.*lambda-symbol* (&body args)
   (declare (ignore args))
-  (error "Call ~S before using the λ reader macro."
-         'install-λ-reader))
+  (error "Use ~S, ~S or ~S before using the λ reader macro."
+         'install-λ-reader 'new-readtable-with-λ-reader 'define-λ-readtable))
 
-(define-symbol-macro #.(intern "Λ" *package*) (#.(intern "Λ" *package*)))
+(define-symbol-macro #.*lambda-symbol* (#.*lambda-symbol*))
 
-(defun λ-reader (stream char)
-  (let ((stream (make-concatenated-stream
-		 (make-string-input-stream (string char))
-		 stream))
-	(*readtable* *saved-readtable*))
-	;; Chandler's original is less efficient but compatible with any user's readtable:
-	;;(*readtable* (copy-readtable)))
-	;;(set-syntax-from-char char char)
-    (let ((read-symbol (read stream t nil t)))
-      (cond
-        ((eq read-symbol '#.(intern "Λ" *package*))
-         'lambda)
-        (t read-symbol)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defparameter *readtable-λ-reader* (make-hash-table :test 'equal))
+(defparameter *λ-reader-readtable* (make-hash-table :test 'eql))
+
+(defun make-λ-reader (&optional (readtable *readtable*))
+  (or (gethash readtable *readtable-λ-reader*)
+      (let ((reader
+             (lambda (stream char)
+               (let* ((lstream (make-concatenated-stream
+                                (make-string-input-stream (string char))
+                                stream))
+                      (*readtable* readtable)
+                      (read-symbol (read lstream t nil t)))
+                 (if (eq read-symbol *lambda-symbol*)
+                     'lambda
+                     read-symbol)))))
+        (setf (gethash reader *λ-reader-readtable*) readtable)
+        (setf (gethash readtable *readtable-λ-reader*) reader)
+        reader)))
+
+(defun λ-reader-p (x)
+  (nth-value 1 (gethash x *λ-reader-readtable*)))
 
 (defun λ-printer (stream object)
-  (cond
-    ((and
-      (ecase *print-case*
-        ((:upcase :capitalize) (eq (get-macro-character #\Λ) #'λ-reader))
-        (:downcase (eq (get-macro-character #\λ) #'λ-reader)))
-      (eq (find-symbol "Λ" *package*)
-          '#.(intern "Λ" *package*)))
-     (write '#.(intern "Λ" *package*) :stream stream))
-    (t (let ((*print-pprint-dispatch* (copy-pprint-dispatch)))
-         (set-pprint-dispatch '(eql lambda) nil)
-         (write object :stream stream)))))
+  (if (and
+       (λ-reader-p (get-macro-character
+                    (ecase *print-case*
+                      ((:upcase :capitalize) #\Λ)
+                      (:downcase #\λ))))
+       (eq (find-symbol (symbol-name *lambda-symbol*) *package*) *lambda-symbol*))
+      (write *lambda-symbol* :stream stream)
+      (let ((*print-pprint-dispatch* (copy-pprint-dispatch)))
+        (set-pprint-dispatch '(eql lambda) nil)
+        (write object :stream stream))))
 
-(defun install-λ-reader ()
-  (set-macro-character #\λ #'λ-reader t)
-  (set-macro-character #\Λ #'λ-reader t)
+(defun install-λ-printer ()
   (set-pprint-dispatch '(eql lambda) #'λ-printer))
 
+(defun install-λ-reader-helper (old-readtable new-readtable)
+  (set-macro-character #\λ (make-λ-reader old-readtable) t new-readtable)
+  (set-macro-character #\Λ (make-λ-reader old-readtable) t new-readtable)
+  (install-λ-printer)
+  nil)
+
+(defun install-λ-reader (&optional (readtable *readtable*))
+  (let ((old-readtable (copy-readtable readtable)))
+    (install-λ-reader-helper old-readtable readtable)
+    readtable))
+
+(defun new-readtable-with-λ-reader (&optional (readtable *readtable*))
+  (let ((new-readtable (copy-readtable readtable)))
+    (install-λ-reader-helper readtable new-readtable)
+    new-readtable))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (install-λ-printer)
+  (let ((λ-reader (make-λ-reader (named-readtables:find-readtable :standard))))
+    (named-readtables:defreadtable :λ-standard
+      (:fuze :standard)
+      (:macro-char #\λ λ-reader)
+      (:macro-char #\Λ λ-reader)))
+  (let ((λ-reader (make-λ-reader (named-readtables:find-readtable :modern))))
+    (named-readtables:defreadtable :λ-modern
+      (:fuze :modern)
+      (:macro-char #\λ λ-reader)
+      (:macro-char #\Λ λ-reader))))
+
+(defmacro define-λ-readtable (name &body options)
+  `(progn
+     (defreadtable ,name ,@options)
+     (install-λ-reader (find-readtable ',name))))
+
+;; Use it: (named-readtables:in-readtable :λ-standard)
+
+
+); eval-when
+
 ;;; Copyright (c) 2008 Brian Mastenbrook
+;;; Copyright (c) 2011 Faré Rideau <fare@tunes.org>
 
 ;;; Permission is hereby granted, free of charge, to any person
 ;;; obtaining a copy of this software and associated documentation

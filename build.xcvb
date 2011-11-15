@@ -1,0 +1,6 @@
+#+xcvb
+(module
+ (:fullname "lambda-reader"
+  :build-depends-on ((:asdf "named-readtables"))
+  :depends-on ("lambda-reader")
+  :supersedes-asdf ("lambda-reader")))
