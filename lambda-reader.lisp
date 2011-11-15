@@ -2,16 +2,19 @@
 ;;; Reader for λ and/or Λ that returns cl:lambda.
 ;;; Legal mumbo-jumbo at bottom of file
 
-;;; To use,
-;;; A- define a package FOO that imports symbol #:λ from package λ-reader.
-;;; B- (common-lisp:in-package FOO) (named-readtables:in-readtable :λ-standard)
-;;;
-;;; Now, any token starting with λ or Λ
-;;; that would be read as the symbol λ-reader:λ
-;;; is now read as cl:lambda.
+#|;;; Use it as follows:
+ (asdf:load-system :lambda-reader)
+ (named-readtables:in-readtable :λ-standard)
+ (defpackage :FOO (:use :cl) (:import-from :λ-reader #:λ))
+ (in-package :FOO)
+ (funcall ((λ(x) (funcall x x)) (λ (f) (λ (x) (if (<= x 2) 1 (* x (funcall (funcall f f) (1- x))))))) 6)
+|#
+;;; When using the :λ-standard readtable, the :λ-modern readtable,
+;;; or any readtable created using define-λ-readtable,
+;;; any token starting with λ or Λ that would be read as the symbol λ-reader:λ
+;;; is now read as cl:lambda instead.
 ;;; Moreover, it will be pretty-printed as λ-reader:λ would; thus,
 ;;; if the printer case is uppercase, Λ will be printed; otherwise λ will be.
-;;;
 ;;; You can define your own readtables using λ with define-λ-readtable,
 ;;; which is a variant of named-readtables:defreadtable that does magic for λ.
 
@@ -97,21 +100,18 @@
   (let ((λ-reader (make-λ-reader (named-readtables:find-readtable :standard))))
     (named-readtables:defreadtable :λ-standard
       (:fuze :standard)
-      (:macro-char #\λ λ-reader)
-      (:macro-char #\Λ λ-reader)))
+      (:macro-char #\λ λ-reader t)
+      (:macro-char #\Λ λ-reader t)))
   (let ((λ-reader (make-λ-reader (named-readtables:find-readtable :modern))))
     (named-readtables:defreadtable :λ-modern
       (:fuze :modern)
-      (:macro-char #\λ λ-reader)
-      (:macro-char #\Λ λ-reader))))
+      (:macro-char #\λ λ-reader t)
+      (:macro-char #\Λ λ-reader t))))
 
 (defmacro define-λ-readtable (name &body options)
   `(progn
      (defreadtable ,name ,@options)
      (install-λ-reader (find-readtable ',name))))
-
-;; Use it: (named-readtables:in-readtable :λ-standard)
-
 
 ); eval-when
 
