@@ -46,6 +46,7 @@
 (defparameter *λ-reader-readtable* (make-hash-table :test 'eql))
 
 (defun make-λ-reader (&optional (readtable *readtable*))
+  (setf readtable (find-readtable readtable))
   (or (gethash readtable *readtable-λ-reader*)
       (let ((reader
              (lambda (stream char)
@@ -97,16 +98,16 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (install-λ-printer)
-  (let ((λ-reader (make-λ-reader (named-readtables:find-readtable :standard))))
-    (named-readtables:defreadtable :λ-standard
-      (:fuze :standard)
-      (:macro-char #\λ λ-reader t)
-      (:macro-char #\Λ λ-reader t)))
-  (let ((λ-reader (make-λ-reader (named-readtables:find-readtable :modern))))
-    (named-readtables:defreadtable :λ-modern
-      (:fuze :modern)
-      (:macro-char #\λ λ-reader t)
-      (:macro-char #\Λ λ-reader t))))
+  (defreadtable :λ-common-lisp
+    (:fuze :common-lisp)
+    (:macro-char #\λ (make-λ-reader :common-lisp) t)
+    (:macro-char #\Λ (make-λ-reader :common-lisp) t))
+  (defreadtable :λ-standard
+    (:merge :λ-common-lisp))
+  (defreadtable :λ-modern
+    (:fuze :modern)
+    (:macro-char #\λ (make-λ-reader :modern) t)
+    (:macro-char #\Λ (make-λ-reader :modern) t)))
 
 (defmacro define-λ-readtable (name &body options)
   `(progn
