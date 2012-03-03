@@ -5,7 +5,8 @@
 #|;;; Use it as follows:
  (asdf:load-system :lambda-reader)
  (named-readtables:in-readtable :λ-standard)
- (defpackage :FOO (:use :cl) (:import-from :λ-reader #:λ))
+ (defpackage :FOO (:use :cl :λ-reader))
+ ;;OR a stricter: (defpackage :FOO (:use :cl) (:import-from :λ-reader #:λ))
  (in-package :FOO)
  (funcall ((λ(x) (funcall x x)) (λ (f) (λ (x) (if (<= x 2) 1 (* x (funcall (funcall f f) (1- x))))))) 6)
 |#
