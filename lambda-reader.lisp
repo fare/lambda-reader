@@ -1,6 +1,14 @@
 ;;; -*- Mode: Lisp ; Base: 10 ; Syntax: ANSI-Common-Lisp -*-
 ;;; Reader for λ and/or Λ that returns cl:lambda.
 ;;; Legal mumbo-jumbo at bottom of file
+;;;
+;;; Note that this file uses UTF-8.
+;;; But if you use an implementation that does not recognize UTF-8,
+;;; and instead has 8-bit characters, it should still work,
+;;; and other files should still be able to use its functionality, provided
+;;; (1) you do NOT transcode either this file or the files that use it
+;;; (2) you do not care that lambdas be read a sequence of characters CEBB
+;;; or CE9B for uppercase lambda rather than a single character.
 
 #|;;; Use it as follows:
  (asdf:load-system :lambda-reader)
@@ -22,17 +30,22 @@
 #+xcvb (module ())
 
 (defpackage :λ-reader (:use :cl :named-readtables)
-  (:nicknames #:lambda-readtable)
+  ;;(:nicknames #:lambda-reader)
   (:export #:λ #:make-λ-reader #:install-λ-printer
            #:install-λ-reader #:new-readtable-with-λ-reader #:define-λ-readtable))
 
 (in-package :λ-reader)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *lambda-string* "λ")
+  (defvar *lowercase-lambda-string* (string-downcase *lambda-string*)) ; λ or ???
+  (defvar *uppercase-lambda-string* (string-upcase *lambda-string*)) ; Λ or ???
+  (defvar *lowercase-lambda-char* (char *lowercase-lambda-string* 0))
+  (defvar *uppercase-lambda-char* (char *uppercase-lambda-string* 0))
   (defvar *lambda-symbol*
     (let ((*package* (find-package :λ-reader))
           (*readtable* (find-readtable :standard)))
-      (read-from-string "λ"))
+      (read-from-string *lambda-string*))
     "Magic lambda symbol"))
 
 (defmacro #.*lambda-symbol* (&body args)
@@ -70,9 +83,9 @@
   (if (and
        (λ-reader-p (get-macro-character
                     (ecase *print-case*
-                      ((:upcase :capitalize) #\Λ)
-                      (:downcase #\λ))))
-       (eq (find-symbol #.(symbol-name *lambda-symbol*) *package*) *lambda-symbol*))
+                      ((:upcase :capitalize) #.*uppercase-lambda-char*)
+                      (:downcase #.*lowercase-lambda-char*))))
+       (eq (find-symbol *uppercase-lambda-string* *package*) *lambda-symbol*))
       (write *lambda-symbol* :stream stream)
       (let ((*print-pprint-dispatch* (copy-pprint-dispatch)))
         (set-pprint-dispatch '(eql lambda) nil)
@@ -82,8 +95,9 @@
   (set-pprint-dispatch '(eql lambda) #'λ-printer))
 
 (defun install-λ-reader-helper (old-readtable new-readtable)
-  (set-macro-character #\λ (make-λ-reader old-readtable) t new-readtable)
-  (set-macro-character #\Λ (make-λ-reader old-readtable) t new-readtable)
+  (set-macro-character *lowercase-lambda-char* (make-λ-reader old-readtable) t new-readtable)
+  (unless (eql *lowercase-lambda-char* *uppercase-lambda-char*)
+    (set-macro-character *uppercase-lambda-char* (make-λ-reader old-readtable) t new-readtable))
   (install-λ-printer)
   new-readtable)
 
@@ -101,14 +115,16 @@
   (install-λ-printer)
   (defreadtable :λ-common-lisp
     (:fuze :common-lisp)
-    (:macro-char #\λ (make-λ-reader :common-lisp) t)
-    (:macro-char #\Λ (make-λ-reader :common-lisp) t))
+    (:macro-char #.*lowercase-lambda-char* (make-λ-reader :common-lisp) t)
+    (:macro-char #.*uppercase-lambda-char* (make-λ-reader :common-lisp) t))
   (defreadtable :λ-standard
     (:merge :λ-common-lisp))
+  #|(defreadtable :lambda-standard (:merge :λ-standard))|#
   (defreadtable :λ-modern
     (:fuze :modern)
-    (:macro-char #\λ (make-λ-reader :modern) t)
-    (:macro-char #\Λ (make-λ-reader :modern) t)))
+    (:macro-char #.*lowercase-lambda-char* (make-λ-reader :modern) t)
+    (:macro-char #.*uppercase-lambda-char* (make-λ-reader :modern) t))
+  #|(defreadtable :lambda-modern (:merge :λ-modern))|#)
 
 (defmacro define-λ-readtable (name &body options)
   `(progn
