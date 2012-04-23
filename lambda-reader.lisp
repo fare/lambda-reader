@@ -1,14 +1,32 @@
-;;; -*- Mode: Lisp ; Base: 10 ; Syntax: ANSI-Common-Lisp -*-
+;;; -*- Mode: Lisp ; Base: 10 ; Syntax: ANSI-Common-Lisp; coding: utf-8 -*-
 ;;; Reader for λ and/or Λ that returns cl:lambda.
-;;; Legal mumbo-jumbo at bottom of file
+;;; ♡ Copying is an act of love. Please copy. — Faré Rideau
+;;; Legal mumbo-jumbo at bottom of file.
 ;;;
-;;; Note that this file uses UTF-8.
-;;; But if you use an implementation that does not recognize UTF-8,
+;;; WARNING ABOUT ENCODING:
+;;; Note that this file uses UTF-8, at least,
+;;; the original source file as distributed by the author does.
+;;; However, if you use an implementation that does not recognize UTF-8,
 ;;; and instead has 8-bit characters, it should still work,
 ;;; and other files should still be able to use its functionality, provided
-;;; (1) you do NOT transcode either this file or the files that use it
-;;; (2) you do not care that lambdas be read a sequence of characters CEBB
-;;; or CE9B for uppercase lambda rather than a single character.
+;;; (1) you either do NOT transcode either this file or the files that use it,
+;;;  or you do it in compatible ways so that lambdas are still recognized
+;;;  as the same characters or sequences of characters, and
+;;; (2) when using an implementation that does not recognize
+;;;  this file's encoding (either UTF-8 or transcoded),
+;;;  you do not care too much that lambdas be read
+;;;  as a single character or any particular sequence of characters, and
+;;; (3) you are not unhappy with how your implementation prints a λ,
+;;;  though it may at times "lowercase" or "uppercase" it in some way;
+;;;  you are responsible for controlling encoding and case
+;;;  to achieve the effects you want.
+;;; For instance, reading this UTF-8 encoded file in an 8-bit implementation
+;;; will read a λ as two characters of code #xCE #xBB
+;;; instead of one character of code #x3BB;
+;;; on a latin1 implementation, this will be characters Î»,
+;;; which is uppercase and may be downcased as î» (code #xEE #xBB).
+;;; We make every effort so it will work in this and all other cases.
+
 
 #|;;; Use it as follows:
  (asdf:load-system :lambda-reader)
@@ -16,7 +34,8 @@
  (defpackage :FOO (:use :cl :λ-reader))
  ;;OR a stricter: (defpackage :FOO (:use :cl) (:import-from :λ-reader #:λ))
  (in-package :FOO)
- (funcall ((λ(x) (funcall x x)) (λ (f) (λ (x) (if (<= x 2) 1 (* x (funcall (funcall f f) (1- x))))))) 6)
+ ;; Factorial 10 using λ's and a Y-combinator.
+ (funcall ((λ(x) (funcall x x)) (λ (f) (λ (x) (if (<= x 2) 1 (* x (funcall (funcall f f) (1- x))))))) 10)
 |#
 ;;; When using the :λ-standard readtable, the :λ-modern readtable,
 ;;; or any readtable created using define-λ-readtable,
@@ -134,7 +153,7 @@
 ); eval-when
 
 ;;; Copyright (c) 2008 Brian Mastenbrook
-;;; Copyright (c) 2011 Faré Rideau <fare@tunes.org>
+;;; Copyright (c) 2011-2012 Faré Rideau <fare@tunes.org>
 
 ;;; Permission is hereby granted, free of charge, to any person
 ;;; obtaining a copy of this software and associated documentation
