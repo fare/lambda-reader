@@ -111,6 +111,8 @@
         (write object :stream stream))))
 
 (defun install-λ-printer ()
+  ;; copy the pprint-dispatch table in case it's the immutable default, such as in CCL
+  (setf *print-pprint-dispatch* (copy-pprint-dispatch)) 
   (set-pprint-dispatch '(eql lambda) #'λ-printer))
 
 (defun install-λ-reader-helper (old-readtable new-readtable)
