@@ -21,10 +21,10 @@
 
 (defmethod perform ((op load-op) (c cl-uncompiled-source-file))
   (declare (ignorable op))
-  (perform (make-instance 'asdf:load-source-op) c))
+  (perform (make-instance 'load-source-op) c))
 
 (defsystem :lambda-reader-8bit
-  :defsystem-depends-on (:asdf-encodings)
+  :defsystem-depends-on (:asdf #-asdf3 :asdf-driver :asdf-encodings)
   #+asdf-unicode :encoding #+asdf-unicode :latin1 ;; CHEAT!
   :description "Use unicode character λ for LAMBDA in reader and printer"
   :long-description "Use unicode character λ for LAMBDA in reader and printer;
