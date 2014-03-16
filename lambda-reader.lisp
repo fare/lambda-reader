@@ -36,6 +36,14 @@
  (in-package :FOO)
  ;; Factorial 10 using λ's and a Y-combinator.
  (funcall ((λ(x) (funcall x x)) (λ (f) (λ (x) (if (<= x 2) 1 (* x (funcall (funcall f f) (1- x))))))) 10)
+
+My .emacs has this line:
+(global-set-key "\C-cl" "λ")
+
+And my .Xcompose has those:
+include "/usr/share/X11/locale/en_US.UTF-8/Compose"
+
+<Multi_key> <period> <backslash>           : "λ"   U03BB  # GREEK SMALL LETTER LAMBDA
 |#
 ;;; When using the :λ-standard readtable, the :λ-modern readtable,
 ;;; or any readtable created using define-λ-readtable,
@@ -155,7 +163,7 @@
 ); eval-when
 
 ;;; Copyright (c) 2008 Brian Mastenbrook
-;;; Copyright (c) 2011-2012 Faré Rideau <fare@tunes.org>
+;;; Copyright (c) 2011-2014 Faré Rideau <fare@tunes.org>
 
 ;;; Permission is hereby granted, free of charge, to any person
 ;;; obtaining a copy of this software and associated documentation
