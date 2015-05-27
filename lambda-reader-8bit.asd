@@ -1,3 +1,5 @@
+#-asdf3 (error "asdf3 or bust!")
+
 (in-package :asdf)
 
 (defclass cl-uncompiled-source-file (cl-source-file)
@@ -23,11 +25,14 @@
   (declare (ignorable op))
   (perform (make-instance 'load-source-op) c))
 
-(defsystem :lambda-reader-8bit
-  :defsystem-depends-on (:asdf #-asdf3 :asdf-driver :asdf-encodings)
-  #+asdf-unicode :encoding #+asdf-unicode :latin1 ;; CHEAT!
+(defsystem "lambda-reader-8bit"
+  :version "1.0.0"
   :description "Use unicode character λ for LAMBDA in reader and printer"
   :long-description "Use unicode character λ for LAMBDA in reader and printer;
 relying on named-readtables as a sensible readtable API."
-  :depends-on (:named-readtables)
+  :author "Francois-Rene Rideau"
+  :license "MIT"
+  :defsystem-depends-on ("asdf-encodings")
+  :encoding :latin1 ;; CHEAT!
+  :depends-on ("named-readtables")
   :components ((cl-uncompiled-source-file "lambda-reader")))
