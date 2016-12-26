@@ -5,25 +5,20 @@
 (defclass cl-uncompiled-source-file (cl-source-file)
   ())
 
-(defmethod output-files ((operation compile-op) (c cl-uncompiled-source-file))
-  (declare (ignorable operation c))
+(defmethod output-files ((o compile-op) (c cl-uncompiled-source-file))
   nil)
 
-(defmethod input-files ((operation compile-op) (c cl-uncompiled-source-file))
-  (declare (ignorable operation c))
+(defmethod input-files ((o compile-op) (c cl-uncompiled-source-file))
   nil)
 
-(defmethod input-files ((operation load-op) (c cl-uncompiled-source-file))
-  (declare (ignorable operation))
-  (input-files (make-instance 'load-source-op) c))
+(defmethod input-files ((o load-op) (c cl-uncompiled-source-file))
+  (input-files 'load-source-op c))
 
-(defmethod perform ((op compile-op) (c cl-uncompiled-source-file))
-  (declare (ignorable op c))
+(defmethod perform ((o compile-op) (c cl-uncompiled-source-file))
   (values))
 
-(defmethod perform ((op load-op) (c cl-uncompiled-source-file))
-  (declare (ignorable op))
-  (perform (make-instance 'load-source-op) c))
+(defmethod perform ((o load-op) (c cl-uncompiled-source-file))
+  (perform 'load-source-op c))
 
 (defsystem "lambda-reader-8bit"
   :version "1.0.0"
